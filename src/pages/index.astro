@@ -19,15 +19,74 @@ const games = await getAllGames(getDatabase());
     />
 
     <div>
-      <h2 class="text-2xl font-medium mb-6 text-slate-100">Featured Games</h2>
+      <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-end sm:justify-between">
+        <h2 class="text-2xl font-medium text-slate-100">Featured Games</h2>
+
+        {games.length > 0 && (
+          <form role="search" data-testid="game-search-form" class="w-full sm:max-w-sm">
+            <label for="game-search" class="block text-sm font-medium text-slate-300 mb-2">
+              Search games by title
+            </label>
+            <input
+              id="game-search"
+              name="search"
+              type="search"
+              placeholder="Search by title"
+              autocomplete="off"
+              data-testid="game-search-input"
+              class="w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-2.5 text-slate-100 placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </form>
+        )}
+      </div>
 
       {games.length === 0 ? (
         <EmptyState text="No games available at the moment." />
       ) : (
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="games-grid">
+        <div
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          data-testid="games-grid"
+        >
           {games.map((game) => <GameCard game={game} />)}
+        </div>
+      )}
+
+      {games.length > 0 && (
+        <div
+          data-testid="search-empty-state"
+          class="text-center py-12 bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700"
+          role="status"
+          aria-live="polite"
+          hidden
+        >
+          <p class="text-slate-300">No games match your search.</p>
         </div>
       )}
     </div>
   </div>
 </Layout>
+
+<script>
+  const searchForm = document.querySelector<HTMLFormElement>('[data-testid="game-search-form"]');
+  const searchInput = document.querySelector<HTMLInputElement>('[data-testid="game-search-input"]');
+  const gamesGrid = document.querySelector<HTMLElement>('[data-testid="games-grid"]');
+  const emptyState = document.querySelector<HTMLElement>('[data-testid="search-empty-state"]');
+  const gameCards = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="game-card"]'));
+
+  searchForm?.addEventListener('submit', (event) => event.preventDefault());
+
+  searchInput?.addEventListener('input', () => {
+    const query = searchInput.value.trim().toLowerCase();
+    let matchingGames = 0;
+
+    gameCards.forEach((gameCard) => {
+      const title = gameCard.dataset.gameTitle?.toLowerCase() ?? '';
+      const matches = title.includes(query);
+      gameCard.hidden = !matches;
+      if (matches) matchingGames += 1;
+    });
+
+    if (gamesGrid) gamesGrid.hidden = matchingGames === 0;
+    if (emptyState) emptyState.hidden = matchingGames > 0;
+  });
+</script>

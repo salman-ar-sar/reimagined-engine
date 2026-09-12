@@ -24,6 +24,28 @@ test.describe('Game Listing and Navigation', () => {
     });
   });
 
+  test('should filter games by title as the search changes', async ({ page }) => {
+    await page.goto('/');
+
+    const searchInput = page.getByRole('searchbox', { name: 'Search games by title' });
+    const gameCards = page.getByTestId('game-card');
+    await expect(gameCards).not.toHaveCount(0);
+
+    const firstGameTitle = await gameCards.first().getAttribute('data-game-title');
+    expect(firstGameTitle).not.toBeNull();
+
+    await searchInput.fill(firstGameTitle!.slice(0, 3).toUpperCase());
+
+    await expect(gameCards.filter({ hasText: firstGameTitle! })).toBeVisible();
+    await expect(page.getByTestId('search-empty-state')).toBeHidden();
+
+    await searchInput.fill('title-that-does-not-exist');
+
+    await expect(page.getByTestId('games-grid')).toBeHidden();
+    await expect(page.getByTestId('search-empty-state')).toBeVisible();
+    await expect(page.getByTestId('search-empty-state')).toContainText('No games match your search.');
+  });
+
   test('should navigate to correct game details page when clicking on a game', async ({ page }) => {
     let gameId: string | null;
     let gameTitle: string | null;
