@@ -4,11 +4,12 @@ import GameCard from '../components/GameCard.astro';
 import PageHero from '../components/PageHero.astro';
 import EmptyState from '../components/EmptyState.astro';
 import { getDatabase } from '../lib/db';
-import { getAllGames, sortGames } from '../lib/games';
+import { getAllGames, getCatalogSummary, sortGames } from '../lib/games';
 
 export const prerender = true;
 
 const games = sortGames(await getAllGames(getDatabase()), 'title-asc');
+const catalogSummary = await getCatalogSummary(getDatabase());
 ---
 
 <Layout title="Tailspin Toys - Crowdfunding your new favorite game!">
@@ -19,6 +20,32 @@ const games = sortGames(await getAllGames(getDatabase()), 'title-asc');
     />
 
     <div>
+      <section
+        aria-labelledby="catalog-summary-heading"
+        class="mb-8 rounded-xl border border-slate-700 bg-slate-800/60 p-6 shadow-lg"
+        data-testid="catalog-summary"
+      >
+        <h2 id="catalog-summary-heading" class="text-xl font-semibold text-slate-100 mb-4">Catalog summary</h2>
+
+        <dl class="grid gap-4 sm:grid-cols-2">
+          <div class="rounded-lg border border-slate-700 bg-slate-900/60 p-4" data-testid="catalog-summary-total-card">
+            <dt class="text-sm uppercase tracking-wide text-slate-400">Total games</dt>
+            <dd class="mt-2 text-3xl font-bold text-slate-100" data-testid="catalog-summary-total">
+              {catalogSummary.totalGames}
+            </dd>
+          </div>
+
+          <div class="rounded-lg border border-slate-700 bg-slate-900/60 p-4" data-testid="catalog-summary-average-card">
+            <dt class="text-sm uppercase tracking-wide text-slate-400">Average rating</dt>
+            <dd class="mt-2 text-3xl font-bold text-slate-100" data-testid="catalog-summary-average">
+              {catalogSummary.averageStarRating === null
+                ? 'No ratings yet'
+                : `${catalogSummary.averageStarRating.toFixed(1)} / 5`}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
       <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-end sm:justify-between">
         <h2 class="text-2xl font-medium text-slate-100">Featured Games</h2>
 
