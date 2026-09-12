@@ -3,6 +3,40 @@ import type { Database } from './db';
 import { games, categories, publishers } from '../../db/schema';
 import type { Game } from '../types/game';
 
+export type GameSortOption = 'title-asc' | 'title-desc' | 'rating-desc';
+
+/**
+ * Sorts games for display. Unrated entries stay at the end when ordering by rating.
+ */
+export function sortGames(gamesToSort: Game[], sortBy: GameSortOption = 'title-asc'): Game[] {
+    return [...gamesToSort].sort((left, right) => {
+        if (sortBy === 'title-desc') {
+            return right.title.localeCompare(left.title, undefined, { sensitivity: 'base' });
+        }
+
+        if (sortBy === 'rating-desc') {
+            const leftRating = left.starRating ?? Number.NEGATIVE_INFINITY;
+            const rightRating = right.starRating ?? Number.NEGATIVE_INFINITY;
+
+            if (leftRating === rightRating) {
+                return left.title.localeCompare(right.title, undefined, { sensitivity: 'base' });
+            }
+
+            if (leftRating === Number.NEGATIVE_INFINITY) {
+                return 1;
+            }
+
+            if (rightRating === Number.NEGATIVE_INFINITY) {
+                return -1;
+            }
+
+            return rightRating - leftRating;
+        }
+
+        return left.title.localeCompare(right.title, undefined, { sensitivity: 'base' });
+    });
+}
+
 const gameSelection = {
     id: games.id,
     title: games.title,
