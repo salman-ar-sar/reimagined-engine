@@ -19,30 +19,65 @@ const games = sortGames(await getAllGames(getDatabase()), 'title-asc');
     />
 
     <div>
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-6">
+      <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-end sm:justify-between">
         <h2 class="text-2xl font-medium text-slate-100">Featured Games</h2>
 
-        <div class="w-full sm:max-w-xs">
-          <label for="game-sort" class="mb-2 block text-sm font-medium text-slate-300">Sort games</label>
-          <select
-            id="game-sort"
-            name="sort"
-            data-testid="game-sort"
-            aria-label="Sort games"
-            class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 shadow-sm transition-colors focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="title-asc">Title: A–Z</option>
-            <option value="title-desc">Title: Z–A</option>
-            <option value="rating-desc">Star rating: highest first</option>
-          </select>
-        </div>
+        {games.length > 0 && (
+          <div class="flex w-full flex-col gap-3 sm:max-w-xl sm:flex-row">
+            <form role="search" data-testid="game-search-form" class="w-full">
+              <label for="game-search" class="block text-sm font-medium text-slate-300 mb-2">
+                Search games by title
+              </label>
+              <input
+                id="game-search"
+                name="search"
+                type="search"
+                placeholder="Search by title"
+                autocomplete="off"
+                data-testid="game-search-input"
+                class="w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-2.5 text-slate-100 placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </form>
+
+            <div class="w-full sm:max-w-xs">
+              <label for="game-sort" class="mb-2 block text-sm font-medium text-slate-300">Sort games</label>
+              <select
+                id="game-sort"
+                name="sort"
+                data-testid="game-sort"
+                aria-label="Sort games"
+                class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2.5 text-slate-100 shadow-sm transition-colors focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="title-asc">Title: A–Z</option>
+                <option value="title-desc">Title: Z–A</option>
+                <option value="rating-desc">Star rating: highest first</option>
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       {games.length === 0 ? (
         <EmptyState text="No games available at the moment." />
       ) : (
-        <div id="games-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="games-grid">
+        <div
+          id="games-grid"
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          data-testid="games-grid"
+        >
           {games.map((game) => <GameCard game={game} />)}
+        </div>
+      )}
+
+      {games.length > 0 && (
+        <div
+          data-testid="search-empty-state"
+          class="text-center py-12 bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700"
+          role="status"
+          aria-live="polite"
+          hidden
+        >
+          <p class="text-slate-300">No games match your search.</p>
         </div>
       )}
     </div>
@@ -50,64 +85,82 @@ const games = sortGames(await getAllGames(getDatabase()), 'title-asc');
 </Layout>
 
 <script>
-  const sortSelect = document.getElementById('game-sort');
-  const gamesGrid = document.getElementById('games-grid');
+  const searchForm = document.querySelector<HTMLFormElement>('[data-testid="game-search-form"]');
+  const searchInput = document.querySelector<HTMLInputElement>('[data-testid="game-search-input"]');
+  const sortSelect = document.querySelector<HTMLSelectElement>('[data-testid="game-sort"]');
+  const gamesGrid = document.querySelector<HTMLElement>('[data-testid="games-grid"]');
+  const emptyState = document.querySelector<HTMLElement>('[data-testid="search-empty-state"]');
+  const gameCards = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="game-card"]'));
 
-  if (sortSelect && gamesGrid) {
-    const parseRating = (value) => {
-      if (!value || value === 'null') {
-        return Number.NEGATIVE_INFINITY;
+  searchForm?.addEventListener('submit', (event) => event.preventDefault());
+
+  const parseRating = (value: string | undefined): number => {
+    if (!value || value === 'null') {
+      return Number.NEGATIVE_INFINITY;
+    }
+
+    const rating = Number(value);
+    return Number.isFinite(rating) ? rating : Number.NEGATIVE_INFINITY;
+  };
+
+  const applySort = (value: string): void => {
+    if (!gamesGrid) return;
+
+    const cards = Array.from(gamesGrid.querySelectorAll<HTMLElement>('[data-testid="game-card"]'));
+
+    cards.sort((left, right) => {
+      if (value === 'title-desc') {
+        return (right.dataset.gameTitle || '').localeCompare(left.dataset.gameTitle || '', undefined, { sensitivity: 'base' });
       }
 
-      const rating = Number(value);
-      return Number.isFinite(rating) ? rating : Number.NEGATIVE_INFINITY;
-    };
+      if (value === 'rating-desc') {
+        const leftRating = parseRating(left.dataset.gameRating);
+        const rightRating = parseRating(right.dataset.gameRating);
 
-    const applySort = (value) => {
-      const cards = Array.from(gamesGrid.querySelectorAll('[data-testid="game-card"]'));
-
-      cards.sort((left, right) => {
-        if (value === 'title-desc') {
-          return (right.dataset.gameTitle || '').localeCompare(left.dataset.gameTitle || '', undefined, { sensitivity: 'base' });
+        if (leftRating === rightRating) {
+          return (left.dataset.gameTitle || '').localeCompare(right.dataset.gameTitle || '', undefined, { sensitivity: 'base' });
         }
 
-        if (value === 'rating-desc') {
-          const leftRating = parseRating(left.dataset.gameRating);
-          const rightRating = parseRating(right.dataset.gameRating);
+        if (leftRating === Number.NEGATIVE_INFINITY) return 1;
+        if (rightRating === Number.NEGATIVE_INFINITY) return -1;
+        return rightRating - leftRating;
+      }
 
-          if (leftRating === rightRating) {
-            return (left.dataset.gameTitle || '').localeCompare(right.dataset.gameTitle || '', undefined, { sensitivity: 'base' });
-          }
+      return (left.dataset.gameTitle || '').localeCompare(right.dataset.gameTitle || '', undefined, { sensitivity: 'base' });
+    });
 
-          if (leftRating === Number.NEGATIVE_INFINITY) {
-            return 1;
-          }
+    cards.forEach((card) => gamesGrid.appendChild(card));
+  };
 
-          if (rightRating === Number.NEGATIVE_INFINITY) {
-            return -1;
-          }
+  const applySearch = (): void => {
+    const query = searchInput?.value.trim().toLowerCase() ?? '';
+    let matchingGames = 0;
 
-          return rightRating - leftRating;
-        }
+    gameCards.forEach((gameCard) => {
+      const title = gameCard.dataset.gameTitle?.toLowerCase() ?? '';
+      const matches = title.includes(query);
+      gameCard.hidden = !matches;
+      if (matches) matchingGames += 1;
+    });
 
-        return (left.dataset.gameTitle || '').localeCompare(right.dataset.gameTitle || '', undefined, { sensitivity: 'base' });
-      });
+    if (gamesGrid) gamesGrid.hidden = matchingGames === 0;
+    if (emptyState) emptyState.hidden = matchingGames > 0;
+  };
 
-      cards.forEach((card) => gamesGrid.appendChild(card));
-    };
+  searchInput?.addEventListener('input', applySearch);
 
+  if (sortSelect) {
     const sortParam = new URLSearchParams(window.location.search).get('sort');
     const initialSort = sortParam === 'title-desc' || sortParam === 'rating-desc' ? sortParam : 'title-asc';
 
     sortSelect.value = initialSort;
     applySort(initialSort);
 
-    sortSelect.addEventListener('change', (event) => {
-      const selectedSort = event.target.value;
+    sortSelect.addEventListener('change', () => {
       const url = new URL(window.location.href);
-      url.searchParams.set('sort', selectedSort);
+      url.searchParams.set('sort', sortSelect.value);
       window.history.replaceState({}, '', url);
-      applySort(selectedSort);
+      applySort(sortSelect.value);
     });
   }
 </script>
