@@ -2,10 +2,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createTestDatabase } from '../../db/test-helpers';
 import { categories, publishers, games } from '../../db/schema';
 import type { Database } from './db';
+import type { Game } from '../types/game';
 import {
     getAllGames,
     getAllGameIds,
     getGameById,
+    sortGames,
 } from './games';
 
 async function seedGames(db: Database, count: number): Promise<void> {
@@ -43,6 +45,26 @@ describe('games data-access helpers', () => {
         expect(all.map((g) => g.title)).toEqual(['Game 01', 'Game 02', 'Game 03']);
         expect(all[0].category).toEqual({ id: expect.any(Number), name: 'Strategy' });
         expect(all[0].publisher).toEqual({ id: expect.any(Number), name: 'Pub One' });
+    });
+
+    it('sorts games by title in reverse order when requested', () => {
+        const gamesToSort: Game[] = [
+            { id: 1, title: 'Alpha', description: 'A', publisher: null, category: null, starRating: 4.5 },
+            { id: 2, title: 'Bravo', description: 'B', publisher: null, category: null, starRating: 5.0 },
+            { id: 3, title: 'Charlie', description: 'C', publisher: null, category: null, starRating: null },
+        ];
+
+        expect(sortGames(gamesToSort, 'title-desc').map((game) => game.title)).toEqual(['Charlie', 'Bravo', 'Alpha']);
+    });
+
+    it('sorts games by rating with unrated entries last', () => {
+        const gamesToSort: Game[] = [
+            { id: 1, title: 'Alpha', description: 'A', publisher: null, category: null, starRating: 3.9 },
+            { id: 2, title: 'Bravo', description: 'B', publisher: null, category: null, starRating: 5.0 },
+            { id: 3, title: 'Charlie', description: 'C', publisher: null, category: null, starRating: null },
+        ];
+
+        expect(sortGames(gamesToSort, 'rating-desc').map((game) => game.title)).toEqual(['Bravo', 'Alpha', 'Charlie']);
     });
 
     it('returns all game ids ordered by title', async () => {
