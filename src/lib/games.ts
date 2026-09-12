@@ -5,6 +5,12 @@ import type { Game } from '../types/game';
 
 export type GameSortOption = 'title-asc' | 'title-desc' | 'rating-desc';
 
+export interface CatalogSummary {
+    totalGames: number;
+    ratedGames: number;
+    averageStarRating: number | null;
+}
+
 /**
  * Sorts games for display. Unrated entries stay at the end when ordering by rating.
  */
@@ -100,4 +106,20 @@ export async function getAllGameIds(db: Database): Promise<number[]> {
 export async function getGameById(db: Database, id: number): Promise<Game | null> {
     const row = await baseGamesQuery(db).where(eq(games.id, id)).get();
     return row ? mapGame(row) : null;
+}
+
+/** Summary totals for the catalog, including a safe average over rated games only. */
+export async function getCatalogSummary(db: Database): Promise<CatalogSummary> {
+    const rows = await db.select({ starRating: games.starRating }).from(games);
+    const totalGames = rows.length;
+    const ratedGames = rows.filter((row) => row.starRating !== null);
+
+    if (ratedGames.length === 0) {
+        return { totalGames, ratedGames: 0, averageStarRating: null };
+    }
+
+    const totalRating = ratedGames.reduce((sum, row) => sum + Number(row.starRating), 0);
+    const averageStarRating = Number((totalRating / ratedGames.length).toFixed(1));
+
+    return { totalGames, ratedGames: ratedGames.length, averageStarRating };
 }

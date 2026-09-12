@@ -21,6 +21,12 @@ test.describe('Home Page', () => {
     await expect(page.getByText('Find your next game! And maybe even back one! Explore our collection!')).toBeVisible();
   });
 
+  test('should display the catalog summary with totals and average rating', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Catalog summary', exact: true })).toBeVisible();
+    await expect(page.getByTestId('catalog-summary-total')).toHaveText(/\d+/);
+    await expect(page.getByTestId('catalog-summary-average')).toContainText(/\d+(\.\d+)?\s*\/\s*5|No ratings yet/);
+  });
+
   test('should let users sort games by title in reverse order', async ({ page }) => {
     const sortControl = page.getByLabel('Sort games');
     await sortControl.selectOption('title-desc');
